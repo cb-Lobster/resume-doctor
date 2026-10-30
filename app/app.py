@@ -20,7 +20,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-from rd import calib, db, kb, llm, memory, pipeline, trace
+from rd import auth, calib, db, kb, llm, memory, pipeline, trace
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(ROOT, 'web')
@@ -224,6 +224,8 @@ class Handler(BaseHTTPRequestHandler):
         if isinstance(body, str):
             body = body.encode('utf-8')
         self.send_response(code)
+        if getattr(self, "_cookie", ""):
+            self.send_header("Set-Cookie", self._cookie)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', 'no-store')
@@ -259,6 +261,8 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         q = parse_qs(u.query)
         p = u.path
+        if not auth.ensure(self, p):
+            return
         if p in ('/', '/index.html'):
             return self._static('index.html')
         if p.startswith('/static/'):
@@ -354,6 +358,10 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         p = u.path
         body = self._json_body()
+        if auth.handle(self, p, body):
+            return
+        if not auth.ensure(self, p):
+            return
 
         if p == '/api/analyze':
             if not (body.get('jd_text') or '').strip():

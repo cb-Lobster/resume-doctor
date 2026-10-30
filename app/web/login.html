@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>简历诊断 Agent · 登录</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:linear-gradient(135deg,#0f172a,#1e3a8a); margin:0;
+         font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+  .card { width:344px; background:#fff; border-radius:14px; padding:28px 26px 22px; box-shadow:0 24px 60px rgba(0,0,0,.35); }
+  h1 { margin:0 0 6px; font-size:19px; color:#0f172a; }
+  p.sub { margin:0 0 18px; font-size:12px; color:#64748b; }
+  label { display:block; font-size:12px; color:#475569; margin:14px 0 6px; }
+  input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none; }
+  input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  button { width:100%; margin-top:20px; padding:11px; border:0; border-radius:8px; background:#2563eb; color:#fff; font-size:14px; cursor:pointer; }
+  button:hover { background:#1d4ed8; }
+  button:disabled { opacity:.6; cursor:default; }
+  #err { min-height:18px; margin-top:12px; font-size:12px; color:#dc2626; }
+</style>
+</head>
+<body>
+<form class="card" id="f">
+  <h1>简历诊断 Agent</h1>
+  <p class="sub">Resume Doctor · 请先登录后使用</p>
+  <label for="u">用户名</label>
+  <input id="u" autocomplete="username" required>
+  <label for="p">密码</label>
+  <input id="p" type="password" autocomplete="current-password" required>
+  <button id="b" type="submit">登录</button>
+  <div id="err"></div>
+</form>
+<script>
+document.getElementById("f").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  var b = document.getElementById("b");
+  var err = document.getElementById("err");
+  b.disabled = true; err.textContent = "";
+  try {
+    var r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: document.getElementById("u").value, password: document.getElementById("p").value }) });
+    var d = await r.json().catch(function () { return {}; });
+    if (r.ok) { location.replace("/"); return; }
+    err.textContent = d.error || "登录失败";
+  } catch (x) { err.textContent = "网络错误，请重试"; }
+  b.disabled = false;
+});
+</script>
+</body>
+</html>
