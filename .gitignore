@@ -1,0 +1,19 @@
+# 运行时数据与隐私
+app/data/*.db
+app/data/*.db-wal
+app/data/*.db-shm
+app/uploads/*
+!app/uploads/.gitkeep
+
+# 本地配置（含 API Key，绝不入库）
+app/config.json
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

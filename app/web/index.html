@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Resume Doctor · 简历评分 Agent 演示</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f6df6'/%3E%3Ctext x='32' y='44' font-family='Segoe UI,Arial' font-size='27' font-weight='700' fill='%23ffffff' text-anchor='middle'%3ERD%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">RD</div>
+    <div class="ttl">
+      <h1>Resume Doctor <span class="ver">Demo 2.0</span></h1>
+      <p>简历评分 Agent · 澄清追问 · 依据溯源 · 版本对比 · 人工校准</p>
+    </div>
+  </div>
+  <div class="topmeta">
+    <span class="pill" id="pill-engine">引擎检测中…</span>
+    <span class="pill" id="pill-kb">知识库 —</span>
+    <span class="pill" id="pill-user">本机用户 —</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="diagnose">① 诊断</button>
+  <button class="tab" data-tab="report">② 诊断报告</button>
+  <button class="tab" data-tab="history">③ 版本库</button>
+  <button class="tab" data-tab="calib">④ 人工校准</button>
+  <button class="tab" data-tab="adopt">⑤ 采纳看板</button>
+  <button class="tab" data-tab="about">⑥ 方案说明</button>
+</nav>
+
+<main>
+  <!-- ============ ① 诊断 ============ -->
+  <section class="view active" id="view-diagnose">
+    <div class="grid2">
+      <div class="card">
+        <h2>① 简历</h2>
+        <div id="drop" class="drop">
+          <input type="file" id="file" accept=".pdf,.docx,.txt,.md" hidden />
+          <div class="drop-inner">
+            <strong>拖入简历文件，或点击选择</strong>
+            <span>支持 PDF / DOCX / TXT · 也可直接在下方粘贴文本</span>
+          </div>
+        </div>
+        <div id="fileinfo" class="fileinfo hidden"></div>
+        <div class="or">或粘贴简历正文</div>
+        <textarea id="resume-text" rows="9" placeholder="把简历内容粘贴到这里（教育背景、技能、项目经历…）"></textarea>
+        <div class="row wrap samples">
+          <span class="muted small">一键填入示例：</span>
+          <button class="chip" data-sample="good1">张伟 v1（一般）</button>
+          <button class="chip" data-sample="good2">张伟 v2（修改后）</button>
+          <button class="chip" data-sample="bad">李萌（问题较多）</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>② 目标岗位 JD</h2>
+        <textarea id="jd-text" rows="10" placeholder="把目标岗位的 JD 原文粘贴到这里"></textarea>
+        <div class="row">
+          <input id="label" type="text" placeholder="这次诊断的名字（可选，如：云计算运维实习 第 2 版）" />
+        </div>
+        <div class="row">
+          <label class="sel">
+            评分引擎
+            <select id="engine">
+              <option value="auto">自动（优先大模型，失败自动降级）</option>
+              <option value="offline">强制离线规则引擎</option>
+            </select>
+          </label>
+          <button id="go" class="primary">开始诊断</button>
+        </div>
+        <div class="hint">
+          流程：解析 → 提取 JD → <b>补充确认</b> → 六维度评分 → 改写 → 护栏 → 版本对比。
+          「补充确认」会针对简历里缺失/说不清的地方提问，可一键跳过。
+        </div>
+      </div>
+    </div>
+
+    <!-- 追问卡片 -->
+    <div class="card clarify-card hidden" id="clarify-card">
+      <div class="phead">
+        <h2>补充确认 <span class="tag tag-info" id="clarify-count">0 个问题</span></h2>
+        <span class="muted small">补一句就能影响分数；也可以直接跳过。</span>
+      </div>
+      <div id="clarify-list" class="clarify-list"></div>
+      <div class="row end">
+        <button class="ghost" id="skip-clarify">全部跳过，直接打分</button>
+        <button class="primary" id="submit-clarify">提交补充信息并评分</button>
+      </div>
+    </div>
+
+    <div class="card progress-card hidden" id="progress-card">
+      <div class="phead">
+        <h2 id="p-stage">准备中…</h2>
+        <span id="p-pct">0%</span>
+      </div>
+      <div class="bar"><div class="bar-fill" id="p-bar"></div></div>
+      <ul class="steps" id="p-steps"></ul>
+      <div class="logs" id="p-logs"></div>
+    </div>
+  </section>
+
+  <!-- ============ ② 报告 ============ -->
+  <section class="view" id="view-report">
+    <div id="report-empty" class="empty">还没有诊断结果。去「① 诊断」页上传简历 + JD 开始。</div>
+    <div id="report-body" class="hidden"></div>
+  </section>
+
+  <!-- ============ ③ 版本库 ============ -->
+  <section class="view" id="view-history">
+    <div class="card">
+      <div class="phead">
+        <h2>简历版本库</h2>
+        <button class="ghost" id="refresh-history">刷新</button>
+      </div>
+      <div id="history-list" class="history"></div>
+    </div>
+    <div class="card">
+      <h2>版本详情</h2>
+      <div id="history-detail" class="empty">点击上面任一版本查看当时的诊断结果。</div>
+    </div>
+  </section>
+
+  <!-- ============ ④ 人工校准 ============ -->
+  <section class="view" id="view-calib">
+    <div class="card">
+      <div class="phead">
+        <h2>人工评分校准</h2>
+        <div class="row" style="margin:0">
+          <button class="ghost seed-btn">一键载入演示数据</button>
+          <button class="ghost" id="refresh-calib">刷新</button>
+        </div>
+      </div>
+      <p class="muted small">
+        给某个版本录入老师/HR 打的分数，系统把 Agent 分与人工分对照：
+        <b>MAE</b>（平均绝对偏差）、<b>命中率</b>（偏差 ±5 分内占比）、<b>Pearson r</b>（样本 ≥3 才算）。
+      </p>
+      <div class="metrics" id="calib-metrics"></div>
+      <div class="advice-box" id="calib-advice"></div>
+    </div>
+
+    <div class="card">
+      <h2>逐条对照</h2>
+      <div id="calib-table" class="empty">还没有人工评分记录，先在最下面给某个版本打分。</div>
+    </div>
+
+    <div class="card">
+      <h2>维度偏差（Agent − 人工）</h2>
+      <p class="muted small">正值＝Agent 打高了，负值＝打低了；|偏差| &gt; 2 分会标红。</p>
+      <div id="calib-dims" class="empty">需要录入"逐维度人工分"才能分析。</div>
+    </div>
+
+    <div class="card">
+      <h2>录入人工评分</h2>
+      <div class="row wrap">
+        <label class="sel">版本 <select id="hr-version"></select></label>
+        <label class="sel">总分 <input id="hr-total" type="number" min="0" max="100" step="1" placeholder="0-100" /></label>
+        <label class="sel">评分人 <input id="hr-reviewer" type="text" placeholder="老师 / HR" /></label>
+      </div>
+      <div class="dim-grid" id="hr-dims"></div>
+      <div class="row">
+        <input id="hr-note" type="text" placeholder="备注（可选，例如：按大厂实习岗口径评分）" />
+        <button class="primary" id="hr-save">保存人工评分</button>
+      </div>
+      <div class="hint">维度分不必全填，填几个就只对比几个维度。</div>
+    </div>
+  </section>
+
+  <!-- ============ ⑤ 采纳看板 ============ -->
+  <section class="view" id="view-adopt">
+    <div class="card">
+      <div class="phead">
+        <h2>建议采纳看板</h2>
+        <div class="row" style="margin:0">
+          <button class="ghost seed-btn">一键载入演示数据</button>
+          <button class="ghost" id="refresh-adopt">刷新</button>
+        </div>
+      </div>
+      <p class="muted small">对应方案里的"建议质量"评估：采纳率 + 采纳后提分，判断建议是不是真的有用。</p>
+      <div class="metrics" id="adopt-metrics"></div>
+      <div class="advice-box" id="adopt-advice"></div>
+    </div>
+
+    <div class="cols2">
+      <div class="card">
+        <h2>各版本采纳情况</h2>
+        <div id="adopt-bars"></div>
+      </div>
+      <div class="card">
+        <h2>采纳 → 提分</h2>
+        <div id="adopt-lift"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ⑥ 方案说明 ============ -->
+  <section class="view" id="view-about">
+    <div class="card">
+      <h2>本次新增的四个能力</h2>
+      <table class="table">
+        <thead><tr><th>能力</th><th>做法</th><th>在哪看</th></tr></thead>
+        <tbody>
+          <tr><td>澄清追问</td><td>规则先找简历信息缺口（无量化/缺小节/无证书/无到岗时间/JD 词未覆盖…），生成带快捷选项的问题；作答后作为"用户确认事实"注入评分，答案同时写进报告与版本库</td><td>① 诊断页「补充确认」卡片</td></tr>
+          <tr><td>依据溯源</td><td>解析 <code>kb/rubric.md</code> 的「维度 N（X 分）」与「a-b 档」区间表；模型只给分，<b>档位由脚本按分数反查</b>，保证每条依据都真实存在于知识库</td><td>② 报告页的「依据」标签（可点开看原文）</td></tr>
+          <tr><td>人工评分校准</td><td>录入人工总分 + 六维度分，计算 MAE、±5 分命中率、Pearson r、维度系统偏差</td><td>④ 人工校准页</td></tr>
+          <tr><td>建议采纳看板</td><td>采纳率、逐条采纳状态、采纳后提分（相邻版本 delta 分组对比）</td><td>⑤ 采纳看板页</td></tr>
+          <tr><td>离线兜底</td><td>断网 / 无 Key / 接口异常时自动切规则引擎（关键词覆盖率、量化计数、STAR 词表），报告标记「离线演示模式」</td><td>顶部引擎徽标 + 报告头部</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>原有五大模块（保持不动）</h2>
+      <table class="table">
+        <tbody>
+          <tr><td>① 感知解析</td><td>零依赖 PDF 解析 + DOCX 解包 + 简历小节切分</td><td>rd/pdftext.py · rd/extract.py · rd/resume.py</td></tr>
+          <tr><td>② 规划（工作流）</td><td>解析 → JD → 检索 → 确认 → 评分 → 改写 → 护栏 → 对比，每步可视化</td><td>rd/pipeline.py</td></tr>
+          <tr><td>③ 记忆</td><td>短期记忆（进程内 2h）/ 长期版本库 + 扣分点 + 采纳 + 画像（SQLite）</td><td>rd/memory.py · rd/db.py</td></tr>
+          <tr><td>④ 工具</td><td>file_parser / jd_extract / kb_search(BM25) / score_engine / rewrite / diff_check</td><td>rd/*.py</td></tr>
+          <tr><td>⑤ 护栏</td><td>隐私检测（身份证/住址/银行卡）+ 改写"新增数字或证书"虚构检查</td><td>rd/guard.py</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Resume Doctor Demo 2.0 · 本地运行 · 内置 Python 运行时 · 数据只存在本机</span>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

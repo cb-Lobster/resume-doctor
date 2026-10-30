@@ -1,0 +1,6 @@
+# 不转换换行，保证 启动.bat 的 CRLF 原样保存（LF 的 bat 在 cmd 里会报错）
+*.bat -text
+*.pyd binary
+*.dll binary
+*.exe binary
+*.zip binary
